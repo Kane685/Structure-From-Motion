@@ -125,6 +125,7 @@ def run_pair_mode(args: argparse.Namespace) -> None:
         ratio=args.ratio,
         max_image_size=args.max_image_size,
         save_figures=True,
+
     )
 
     metrics = analysis.csv_dict()

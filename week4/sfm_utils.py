@@ -329,7 +329,7 @@ def select_initial_pair_by_matches(
     ratio: float,
     max_candidates: int | None, # only choose in first max_candidates images if this parameter is set
     max_pair_gap: int | None, # initial pair can only have a maximum gap of max_pair_gap if this parameter is set
-) -> tuple[int, int, dict]:
+) -> tuple[int, int, int]:
     """
     Select the initial image pair using only the number of descriptor matches.
     Make sure the selection is under limitation: max_candidates and max_pair_gap.
@@ -363,9 +363,7 @@ def select_initial_pair_by_matches(
     if best_i is None or best_j is None:
         raise ValueError("Could not find a valid initial pair.")
     # return result
-    return best_i, best_j, {
-        "matches": best_match_count,
-    }
+    return best_i, best_j, best_match_count
 
 def select_next_image_by_matches(
     registered_images: set[int],

@@ -7,12 +7,10 @@ visualisation.
 """
 
 from __future__ import annotations
-
 import argparse
 import importlib.util
 from pathlib import Path
 import sys
-
 import numpy as np
 
 from two_view_utils import (
@@ -224,6 +222,7 @@ def run(args: argparse.Namespace) -> tuple[TwoViewResult, ThirdViewResult | None
         confidence=args.confidence,
     )
     R, t, pose_mask = recover_relative_pose(E, pts1, pts2, K, inlier_mask=essential_mask)
+    pose_mask = pose_mask.reshape((pose_mask.shape[0])) == 1
 
     pts1_pose = pts1[pose_mask]
     pts2_pose = pts2[pose_mask]
@@ -379,6 +378,7 @@ def run(args: argparse.Namespace) -> tuple[TwoViewResult, ThirdViewResult | None
             threshold=args.pnp_ransac_threshold,
             confidence=args.confidence,
         )
+        pnp_mask = pnp_mask.reshape((pnp_mask.shape[0]))
         pnp_points = pnp_points3d[pnp_mask]
         pts3_inliers = pts3[pnp_mask]
         pnp_errors = compute_reprojection_errors(pnp_points, pts3_inliers, K3, R3, t3)

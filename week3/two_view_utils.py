@@ -14,6 +14,7 @@ from typing import Iterable
 
 import cv2
 import numpy as np
+import math
 
 
 @dataclass
@@ -127,7 +128,19 @@ def estimate_essential_matrix(
     TODO: Complete this function.
 
     """
-    raise NotImplementedError("TODO: estimate essential matrix")
+    
+    # get esential matrix and inlier mask
+    E, mask = cv2.findEssentialMat(
+        pts1,
+        pts2,
+        K,
+        method=cv2.RANSAC,
+        prob=confidence,
+        threshold=threshold,
+    )
+    return (E, mask)
+
+    # raise NotImplementedError("TODO: estimate essential matrix")
 
 
 def recover_relative_pose(
@@ -142,7 +155,14 @@ def recover_relative_pose(
     TODO: Complete this function.
 
     """
-    raise NotImplementedError("TODO: recover relative pose")
+     
+    # get relative rotation, translation and pose mask
+    # first output is number of useful 3D points
+    # last output is those points in front of camera
+    _, R, t, pose_mask = cv2.recoverPose(E, pts1, pts2, K, mask=inlier_mask)
+    return (R, t, pose_mask)
+    
+    # raise NotImplementedError("TODO: recover relative pose")
 
 
 def make_projection_matrices(
@@ -153,8 +173,19 @@ def make_projection_matrices(
     """Create projection matrices P1 = K[I|0] and P2 = K[R|t].
 
     TODO: Complete this function.
+
     """
-    raise NotImplementedError("TODO: create projection matrices")
+
+    # concatenate matrix
+    m1 = np.concatenate((np.eye(3), np.zeros((3,1))), axis = 1)
+    m2 = np.concatenate((R, t), axis = 1)
+    # calculate target projection matrix
+    p1 = K @ m1
+    p2 = K @ m2
+    # p1 is projection matrix of the first camera and p2 is projection matrix of the second matrix
+    return (p1, p2)
+
+    # raise NotImplementedError("TODO: create projection matrices")
 
 
 def triangulate_points(
@@ -169,7 +200,19 @@ def triangulate_points(
     TODO: Complete this function.
 
     """
-    raise NotImplementedError("TODO: triangulate 3D points")
+
+    # get projection matrix
+    p1, p2 = make_projection_matrices(K, R, t)
+    # calculate homogeneous 4D points
+    # remember shape of points output by this function is (4,N)
+    p4 = cv2.triangulatePoints(p1, p2, pts1.T, pts2.T)
+    # p4 = p4.reshape((p4.shape[0], p4.shape[2]))
+    # get 3D points
+    p3 = p4[:3] / p4[3] # (3, N)
+    p3 = p3.T # (N, 3)
+    return p3
+
+    # raise NotImplementedError("TODO: triangulate 3D points")
 
 
 def project_points(
@@ -181,8 +224,25 @@ def project_points(
     """Project 3D points into an image using camera matrix K[R|t].
 
     TODO: Complete this function.
+
     """
-    raise NotImplementedError("TODO: project 3D points")
+    
+    # get concatenate matrix
+    m = np.concatenate((R, t), axis = 1)
+    # calculate projection matrix
+    p = K @ m
+    # get homogeneous coordiante of 3D point (N, 3) -> (N, 4)
+    N = points3d.shape[0]
+    last_column = np.ones((N, 1))
+    p4 = np.concatenate((points3d, last_column), axis = 1) # (N, 4)
+    # get projected 3D point
+    p3 = p @ p4.T # (3, N)
+    # convert 3D point to 2D point
+    result = p3[:2] / p3[2] # (2, N)
+    result = result.T # (N, 2)
+    return result
+
+    # raise NotImplementedError("TODO: project 3D points")
 
 
 def compute_reprojection_errors(
@@ -196,8 +256,22 @@ def compute_reprojection_errors(
 
     TODO: Complete this function by projecting points3d and comparing with
     observed_pts.
+
     """
-    raise NotImplementedError("TODO: compute reprojection errors")
+
+    # reshape observed points from (N, 1, 2) into (N, 2)
+    # observed_pts = observed_pts.reshape((observed_pts.shape[0], observed_pts.shape[2]))
+    # get projected 2D points
+    p2 = project_points(points3d, K, R , t)
+    # calculate Euclidean error
+    N = p2.shape[0]
+    result = np.zeros((N))
+    for i in range(N):
+        error = math.sqrt((p2[i, 0] - observed_pts[i, 0])**2 + (p2[i, 1] - observed_pts[i, 1])**2)
+        result[i] = error
+    return result
+
+    # raise NotImplementedError("TODO: compute reprojection errors")
 
 
 def compute_depths(
@@ -210,8 +284,18 @@ def compute_depths(
     TODO: Complete this function.
 
     Camera 1 has extrinsics [I|0]. Camera 2 has extrinsics [R|t].
+
     """
-    raise NotImplementedError("TODO: compute point depths")
+
+    # 3D coordiante is based on camera 1 so that depth for camera 1 is merely the third element
+    d1 = points3d[:,2] # (N)
+    # apply coordinate transformation for camera 2
+    p2 = R @ points3d.T + t
+    p2 = p2.T
+    d2 = p2[:,2]
+    return (d1, d2)
+
+    # raise NotImplementedError("TODO: compute point depths")
 
 
 def filter_reconstructed_points(
@@ -230,8 +314,22 @@ def filter_reconstructed_points(
     - have finite 3D coordinates,
     - have positive depth in both cameras,
     - have reprojection error at most max_reprojection_error in both images.
+
     """
-    raise NotImplementedError("TODO: filter reconstructed points")
+
+    # get mask for finite 3D coordinate
+    mask_coordinate = np.isfinite(points3d) # (N, 3)
+    mask_coordinate = mask_coordinate[:, 0] & mask_coordinate[:, 1] & mask_coordinate[:, 2]
+    # get mask for depth in both cameras
+    d1, d2 = compute_depths(points3d, R, t)
+    mask_depth = (d1 > 0) & (d2 > 0)
+    # get mask for reprojection error
+    mask_error = (errors1 < max_reprojection_error) & (errors2 < max_reprojection_error)
+    # combine three masks
+    result = mask_coordinate & mask_depth & mask_error
+    return result
+
+    # raise NotImplementedError("TODO: filter reconstructed points")
 
 
 def build_2d3d_correspondences(
@@ -259,8 +357,27 @@ def build_2d3d_correspondences(
     Return:
     - points3d: Nx3 reconstructed 3D points
     - pts_new: Nx2 feature coordinates in the new image
+
     """
-    raise NotImplementedError("TODO: build 2D-3D correspondences")
+
+    # filter those matches which already have 3D points 
+    # get filtered 3D points
+    # get new pts
+    p3 = []
+    pts_new = []
+    for i in anchor_to_new_matches:
+        if np.any(reconstructed_anchor_indices == i.queryIdx):
+            index = np.where(reconstructed_anchor_indices == i.queryIdx)
+            # it is possible that one feature has multiple reconstructed point
+            # just pick the first one
+            index = index[0][0]
+            p3.append(reconstructed_points[index].tolist())
+            pts_new.append([new_keypoints[i.trainIdx].pt[0], new_keypoints[i.trainIdx].pt[1]])
+    p3 = np.array(p3)
+    pts_new = np.array(pts_new)
+    return (p3, pts_new)
+
+    # raise NotImplementedError("TODO: build 2D-3D correspondences")
 
 
 def estimate_camera_pose_pnp(
@@ -278,11 +395,28 @@ def estimate_camera_pose_pnp(
     - R: 3x3 world-to-camera rotation for the new image
     - t: 3x1 world-to-camera translation for the new image
     - inlier_mask: boolean array of shape (N,)
+
     """
-    raise NotImplementedError("TODO: estimate camera pose with PnP")
+    
+    # estimate rotation and translation of camera 3 relative to camera 1
+    # rvec is (3, 1)
+    success, rvec, tvec, inliers = cv2.solvePnPRansac(
+        points3d,
+        pts2d,
+        K,
+        None,
+        reprojectionError = threshold,
+        confidence = confidence,
+    )
+    R3, _ = cv2.Rodrigues(rvec) # (3, 1) -> (3, 3)
+    return (R3, tvec, inliers)
+
+    # raise NotImplementedError("TODO: estimate camera pose with PnP")
 
 
 def sample_point_colours(image: np.ndarray, pts: np.ndarray) -> np.ndarray:
+    # reshape pts
+    # pts = pts.reshape((pts.shape[0], pts.shape[2]))
     if len(pts) == 0:
         return np.empty((0, 3), dtype=np.uint8)
 
@@ -321,8 +455,96 @@ def draw_reprojection_overlay(
 
     This is one of the main ways to check whether your reconstruction is
     geometrically meaningful.
+
     """
-    raise NotImplementedError("TODO: draw two-view reprojection overlay")
+
+    # check validation of outout directory
+    ensure_dir(output_path.parent)
+    # get reporjected points of both images
+    rp1 = project_points(points3d, K, np.eye(3), np.zeros((3, 1)))
+    rp2 = project_points(points3d, K, R, t)
+    # get first max_draw pairs
+    if rp1.shape[0] > max_draw:
+        rp1 = rp1[:max_draw]
+        rp2 = rp2[:max_draw]
+        pts1 = pts1[:max_draw]
+        pts2 = pts2[:max_draw]
+    # draw observed features, reprojected points and their connection in both images
+    for i in range(rp1.shape[0]):
+        # observed is blue circle
+        image1 = cv2.circle(image1,tuple(map(int, pts1[i])),10,(255, 0, 0),-1)
+        image2 = cv2.circle(image2,tuple(map(int, pts2[i])),10,(255, 0, 0),-1)
+        # reprojected is red cross
+        image1 = cv2.drawMarker(
+            image1, 
+            tuple(map(int, rp1[i])), 
+            color=(0, 0, 255),          
+            markerType=cv2.MARKER_TILTED_CROSS,  
+            markerSize=20,                
+            thickness=2,                  
+            line_type=cv2.LINE_AA         
+        )
+        image2 = cv2.drawMarker(
+            image2, 
+            tuple(map(int, rp2[i])), 
+            color=(0, 0, 255),          
+            markerType=cv2.MARKER_TILTED_CROSS,  
+            markerSize=20,                
+            thickness=2,                  
+            line_type=cv2.LINE_AA         
+        )
+        # connection is green
+        image1 = cv2.line(
+            image1, 
+            tuple(map(int, pts1[i])), 
+            tuple(map(int, rp1[i])), 
+            (0, 255, 0), 
+            thickness=1, 
+            lineType=cv2.LINE_8
+        )
+        image2 = cv2.line(
+            image2, 
+            tuple(map(int, pts2[i])), 
+            tuple(map(int, rp2[i])), 
+            (0, 255, 0), 
+            thickness=1, 
+            lineType=cv2.LINE_8
+        )
+        # add tips
+        x = 30
+        y = 30
+        text1_org = (x, y)
+        image1 = cv2.putText(
+            image1, 
+            text="Blue circle is observed points", 
+            org=text1_org, 
+            fontFace=cv2.FONT_HERSHEY_SIMPLEX, 
+            fontScale=1, 
+            color=(255, 255, 255),      
+            thickness=1, 
+            lineType=cv2.LINE_AA
+        )
+        text2_org = (x, y + 35)
+        image1 = cv2.putText(
+            image1, 
+            text="Red cross is reprojected points", 
+            org=text2_org, 
+            fontFace=cv2.FONT_HERSHEY_SIMPLEX, 
+            fontScale=1, 
+            color=(255, 255, 255),      
+            thickness=1, 
+            lineType=cv2.LINE_AA
+        )
+    # create a white gap between image1 and image2
+    h = image1.shape[0]
+    gap_width = 20
+    gap = np.ones((h, gap_width, 3), dtype=np.uint8) * 255
+    # concatenate image1, white gap and image2 inte a single image
+    combined_img = np.hstack((image1, gap, image2))
+    # save image to output path
+    cv2.imwrite(str(output_path), combined_img)
+
+    # raise NotImplementedError("TODO: draw two-view reprojection overlay")
 
 
 def draw_single_image_reprojection_overlay(
@@ -348,7 +570,66 @@ def draw_single_image_reprojection_overlay(
     This is the corresponding correctness check for the image registered by
     PnP.
     """
-    raise NotImplementedError("TODO: draw single-image reprojection overlay")
+
+    # check validation of outout directory
+    ensure_dir(output_path.parent)
+    # get reporjected points
+    rp = project_points(points3d, K, R, t)
+    # get first max_draw pairs
+    if rp.shape[0] > max_draw:
+        rp = rp[:max_draw]
+        observed_pts = observed_pts[:max_draw]
+    # draw observed features, reprojected points and their connection 
+    for i in range(rp.shape[0]):
+        # observed is blue circle
+        image = cv2.circle(image,tuple(map(int, observed_pts[i])),10,(255, 0, 0),-1)
+        # reprojected is red cross
+        image = cv2.drawMarker(
+            image, 
+            tuple(map(int, rp[i])), 
+            color=(0, 0, 255),          
+            markerType=cv2.MARKER_TILTED_CROSS,  
+            markerSize=20,                
+            thickness=2,                  
+            line_type=cv2.LINE_AA         
+        )
+        # connection is green
+        image = cv2.line(
+            image, 
+            tuple(map(int, observed_pts[i])), 
+            tuple(map(int, rp[i])), 
+            (0, 255, 0), 
+            thickness=1, 
+            lineType=cv2.LINE_8
+        )
+        # add tips
+        x = 30
+        y = 30
+        text1_org = (x, y)
+        image = cv2.putText(
+            image, 
+            text="Blue circle is observed points", 
+            org=text1_org, 
+            fontFace=cv2.FONT_HERSHEY_SIMPLEX, 
+            fontScale=1, 
+            color=(255, 255, 255),      
+            thickness=1, 
+            lineType=cv2.LINE_AA
+        )
+        text2_org = (x, y + 35)
+        image = cv2.putText(
+            image, 
+            text="Red cross is reprojected points", 
+            org=text2_org, 
+            fontFace=cv2.FONT_HERSHEY_SIMPLEX, 
+            fontScale=1, 
+            color=(255, 255, 255),      
+            thickness=1, 
+            lineType=cv2.LINE_AA
+        )
+    cv2.imwrite(str(output_path), image)
+
+    # raise NotImplementedError("TODO: draw single-image reprojection overlay")
 
 
 def _camera_center(R: np.ndarray, t: np.ndarray) -> np.ndarray:

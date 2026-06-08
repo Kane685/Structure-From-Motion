@@ -1,0 +1,2 @@
+image_k,anchor_matches,pnp_correspondences,pnp_inliers,median_reprojection_error_px,mean_reprojection_error_px,focal_length_px
+image_3.JPG,412,91,3743,1.0356079271777596,1.2642251807835783,2912.0

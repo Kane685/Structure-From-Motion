@@ -1,0 +1,2 @@
+image_i,image_j,filtered_matches,essential_inliers,pose_inliers,triangulated_points,positive_depth_points,kept_points,median_reprojection_error_px,mean_reprojection_error_px,focal_length_px
+image_1.JPG,image_2.JPG,247,181,181,181,181,181,0.14612513936794833,0.20340971965833424,2912.0

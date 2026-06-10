@@ -1,6 +1,8 @@
-# Week2
+# How to Run Code from Week2 to Week4
 
-## Run Pair Mode
+## Week2
+
+### Run Pair Mode
 
 ```bash
 python week2/week2_pipeline.py \
@@ -11,7 +13,7 @@ python week2/week2_pipeline.py \
   --ratio 0.75
 ```
 
-## Run Dataset Mode
+### Run Dataset Mode
 
 ```bash
 python week2/week2_pipeline.py \
@@ -23,9 +25,9 @@ python week2/week2_pipeline.py \
 ```
 
 
-# Week3
+## Week3
 
-## For Pair Only Debugging
+### For Pair Only Debugging
 
 ```bash
 python week3/week3_pipeline.py \
@@ -37,7 +39,7 @@ python week3/week3_pipeline.py \
   --ratio 0.75
 ```
 
-## For a Good Image Pair plus a Third Image
+### For a Good Image Pair plus a Third Image
 
 ```bash
 python week3/week3_pipeline.py \
@@ -51,9 +53,9 @@ python week3/week3_pipeline.py \
 ```
 
 
-# Week4
+## Week4
 
-## Set Proper Environment for Open3d Visualization
+### Set Proper Environment for Open3d Visualization
 
 ```bash
 sudo apt install x11-apps
@@ -63,7 +65,7 @@ export XDG_SESSION_TYPE=x11
 export LIBGL_ALWAYS_SOFTWARE=1
 ```
 
-## Reconstruction without Final Filtering
+### Reconstruction without Final Filtering
 
 ```bash
 python week4/week4_pipeline.py \
@@ -72,7 +74,7 @@ python week4/week4_pipeline.py \
   --final-filter 0
 ```
 
-## Reconstruction with Final Filtering
+### Reconstruction with Final Filtering
 
 ```bash
 python week4/week4_pipeline.py \
@@ -81,7 +83,7 @@ python week4/week4_pipeline.py \
   --final-filter 1
 ```
 
-## Visualization from Exported Point Cloud
+### Visualization from Exported Point Cloud
 
 ```bash
 python week4/visualization.py \

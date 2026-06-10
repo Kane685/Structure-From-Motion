@@ -1,5 +1,19 @@
 # How to Run Code from Week2 to Week4
 
+
+## Set Environment
+
+```bash
+conda create -n gf4 python=3.10 -y  
+conda activate gf4 
+pip install numpy
+pip install opencv-python
+pip install plotly
+pip install open3d
+pip install scipy
+```
+
+
 ## Week2
 
 ### Run Pair Mode
@@ -55,7 +69,7 @@ python week3/week3_pipeline.py \
 
 ## Week4
 
-### Set Proper Environment for Open3d Visualization
+### Set Proper Environment for Open3d Visualization only for WSL
 
 ```bash
 sudo apt install x11-apps
